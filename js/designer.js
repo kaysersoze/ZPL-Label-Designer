@@ -2,7 +2,8 @@ if (!com)
 	var com = {};
 if (!com.logicpartners)
 	com.logicpartners = {};
-	
+
+
 // http://stackoverflow.com/a/5932203/697477
 HTMLCanvasElement.prototype.RelativeMouse = function(event) {
 	var totalOffsetX = 0;
@@ -65,16 +66,17 @@ if (CP && CP.lineTo) {
 	}
 }
 
-com.logicpartners.labelDesigner = function(canvasid, labelWidth, labelHeight) {
+com.logicpartners.labelDesigner = function(canvasid, labelWidth, labelHeight, dpi = 203, zoom = 1) {
 	this.canvas = document.getElementById(canvasid);
 	this.canvasElement = $(this.canvas);
 
+	this.dpi = dpi;
+	this.zoom = zoom;
 	this.labelWidth = labelWidth * this.dpi;
 	this.labelHeight = labelHeight * this.dpi;
 	this.propertyInspector = new com.logicpartners.propertyInspector(this, this.canvas);
 	this.toolbar = new com.logicpartners.toolsWindow(this, this.canvas);
 	this.labelInspector = new com.logicpartners.labelInspector(this, this.canvas);
-	this.dpi = 200;
 
 	this.drawingContext = this.canvas.getContext("2d");
 	this.elements = [];
@@ -96,15 +98,16 @@ com.logicpartners.labelDesigner = function(canvasid, labelWidth, labelHeight) {
 	var self = this;
 	
 	this.updateLabelSize = function(width, height) {
-		var xchange = (width * this.dpi + 10) - parseInt(this.canvasElement.prop("width"));
 		this.labelWidth = width * this.dpi;
 		this.labelHeight = height * this.dpi;
+		var xchange = (this.labelWidth + 10) - parseInt(this.canvasElement.prop("width"));
 		this.canvasElement.prop("width", this.labelWidth + 10).prop("height", this.labelHeight + 10);
 		this.labelX = this.canvas.width / 2 - this.labelWidth / 2;
 		this.labelY = 5;
 		console.log(xchange);
 		this.propertyInspector.updatePosition(xchange);
 		this.labelInspector.updatePosition(xchange);
+		//this.labelInspector.size.update();
 		this.updateCanvas();
 	}
 
@@ -440,36 +443,55 @@ com.logicpartners.labelDesigner = function(canvasid, labelWidth, labelHeight) {
 
 	this.updateCanvas = function() {
 		this.update();
+		//var self = this;
 		
-		//this.drawingContext.globalCompositeOperation = "source-over";
+		//DRAW RECTANGLE LABEL BORDER
 
-		this.drawingContext.fillStyle = "#FFFFFF";
-		this.drawingContext.fillRect(0, 0, this.canvas.width, this.canvas.height);
+		self.drawingContext.fillStyle = "#FFFFFF";
+		self.drawingContext.fillRect(0, 0, self.canvas.width, self.canvas.height);
 		
-		//this.drawingContext.fillStyle = "rgba(255, 255, 255, 0)";
-		//this.drawingContext.fillRect(0, 0, this.canvas.width, this.canvas.height);
+		//self.drawingContext.fillStyle = "rgba(255, 255, 255, 0)";
+		//self.drawingContext.fillRect(0, 0, self.canvas.width, self.canvas.height);
 
 		// Draw the boundary.
-		this.drawingContext.strokeStyle = "#FF0000";
-		this.drawingContext.lineWidth = 2;
-		this.drawingContext.strokeRect(this.labelX, this.labelY, this.labelWidth, this.labelHeight);
+		self.drawingContext.strokeStyle = "#FF0000";
+		self.drawingContext.lineWidth = 2;
+		self.drawingContext.strokeRect(self.labelX, self.labelY, self.labelWidth, self.labelHeight);
 
-		this.drawingContext.strokeStyle = "#000000";
-		this.drawingContext.fillStyle = "#000000";
+		self.drawingContext.strokeStyle = "#000000";
+		self.drawingContext.fillStyle = "#000000";
 		
-		//this.drawingContext.globalCompositeOperation = "difference";
-
-		for (var i = 0; i < this.currentLayer; i++) {
-			if (this.elements[i]) {
-				this.elements[i].draw(this.drawingContext, this.canvas.width, this.canvas.height);
+		//DRAW TEMPLATE
+		//CurrentLayoutTemplate = '';
+		if (CurrentLayoutTemplate != ''){
+			var img = new Image();
+			img.onload = function() {
+				//self.drawingContext.drawImage(img, 0, 0);
+				self.drawingContext.drawImage(img, 0, 0, self.labelWidth,self.labelHeight);
+				self.drawingContext.beginPath();
+				self.updateCanvasAfterTemplate();
+			};
+			img.src = '/repository/' + CurrentLayoutTemplate ;
+			var timeOut = 5*1000; //ms - waiting for max 5s to laoad
+				
+		}else{
+			self.updateCanvasAfterTemplate();
+		}
+	}
+	
+	this.updateCanvasAfterTemplate = function(){
+		
+		//self.drawingContext.globalCompositeOperation = "difference";
+		for (var i = 0; i < self.currentLayer; i++) {
+			if (self.elements[i]) {
+				self.elements[i].draw(self.drawingContext, self.canvas.width, self.canvas.height);
 			}
 		}
 
-		this.drawingContext.strokeStyle = "#FF0000";
-		this.drawingContext.lineCap = 'butt';
-		this.drawingContext.lineWidth = 2;
-		if (this.activeElement)
-			this.activeElement.drawActive(this.drawingContext);
+		self.drawingContext.strokeStyle = "#FF0000";
+		self.drawingContext.lineCap = 'butt';
+		self.drawingContext.lineWidth = 2;
+		if (self.activeElement) self.activeElement.drawActive(self.drawingContext);
 	}
 	
 	this.generateZPL = function() {
@@ -497,6 +519,202 @@ com.logicpartners.labelDesigner = function(canvasid, labelWidth, labelHeight) {
 		return { "data" : bufferData, "zpl" : data };
 	}
 	
+	this.decodeZPL = function(streamZPL) {
+		var self = this;
+		var x = 1;
+		var y = 1;
+		var typeobj = 'text';
+		var font = '';
+		var fontsize = '';
+		var x1 = 1;
+		var y1 = 1;
+		var lblWidth = 1;
+		var lblHeight = 1;
+		
+		streamZPL = streamZPL.replace("\n","");
+		streamZPL = streamZPL.replace("\r","");
+		var arrayZPL = streamZPL.split("^");
+		
+		for (var i=0; i<arrayZPL.length; i++) {
+			line = arrayZPL[i];
+			lineparam = line.substring(2);
+			lineparams = line.substring(2).split(',');
+			linecommandgroup = line.substring(0, 1);
+			linecommand = line.substring(0, 2);
+			
+			if (linecommandgroup == 'A'){
+				//font typeset 			^A font, height, width
+				fontName = linecommand.substring(1, 1);
+				fontOrientation = lineparams[0]; //ORIENTATION 
+												//N = normal
+												//R = rotated 90 degrees (clockwise)
+												//I = inverted 180 degrees
+												//B = read from bottom up, 270 degrees
+				fontHeight = lineparams[1]; 
+				fontWidth = lineparams[2];
+			}
+			if (linecommandgroup == 'B'){
+				typeobj = 'barcode';
+				//^B3N,N,33N,N
+				fontName = linecommand.substring(1, 1);
+				fontOrientation = lineparams[0]; //ORIENTATION 
+												//N = normal
+												//R = rotated 90 degrees (clockwise)
+												//I = inverted 180 degrees
+												//B = read from bottom up, 270 degrees
+				fontHeight = lineparams[1]; 
+				fontWidth = lineparams[2];
+				
+			}
+			if (linecommandgroup == 'F'){
+				//imposta field origin xy	^FO x, y, alignment
+				if (linecommand == 'FO') {x=lineparams[0]; y=lineparams[1];}
+				//Field separator			^FS
+				if (linecommand == 'FS') {
+					x  = parseInt(x);
+					x1 = parseInt(x1);
+					y  = parseInt(y);
+					y1 = parseInt(y1);
+					
+					if (typeobj == 'text') {self.setNewObject(canvasDesignerText);}
+					if (typeobj == 'rectangle') {self.setNewObject(canvasDesignertRectangle);}
+					if (typeobj == 'barcode') {self.setNewObject(canvasDesignerBarcode);}
+					if (typeobj == 'image') {self.setNewObject(canvasDesignerImage);}
+					
+					console.log(typeobj + x + y + x1 + y1 );
+					//x = self.labelWidth - x;
+					//y = self.labelHeight - y;
+					//x1 = self.labelWidth - x1;
+					//y1 = self.labelHeight - y1;
+					
+					if ((typeobj == 'text') || (typeobj == 'rectangle')) {
+						self.elements[self.currentLayer++] = new self.newObject(x, y, 1, 1);
+					}else if (typeobj == 'barcode'){
+						y1 = fontHeight;
+						self.elements[self.currentLayer++] = new self.newObject(x, y, x1, y1);
+					}else{
+						self.elements[self.currentLayer++] = new self.newObject(x, y, x1, y1);
+					}
+					self.dragAction = 8;
+					self.activeElement = self.elements[self.currentLayer - 1];
+					if (typeobj == 'text') {
+						self.activeElement.fontType = fontName ;
+						self.activeElement.fontSize = fontHeight;
+						
+						while(true){
+							pos = textdesc.indexOf('\\');
+							if (pos>=0){
+								strToFind = textdesc.substr(pos, 3);
+								strToReplace = self.activeElement.SymbolList.find(x => x.zpl == strToFind).value;
+								textdesc = textdesc.replace(strToFind,strToReplace);
+							}else{
+								break;
+							}
+						}
+						self.activeElement.text = textdesc;
+					
+					}else if (typeobj == 'barcode') {
+						self.activeElement.text = textdesc;
+						self.activeElement.fontType = fontName ;
+						self.activeElement.fontSize = fontHeight;
+					}else{
+					}
+					self.activeElement.x = x;
+					self.activeElement.y = y;
+					self.newObject = null;
+					self.newObjectController = null;
+					
+					//reset
+					x = 1;
+					y = 1;
+					typeobj = 'text';
+					textdesc = '';
+					x1 = 1;
+					y1 = 1;
+				}
+				//Field typeset			^FT x, y, alignment
+				if (linecommand == 'FT') { x=lineparams[0]; y=lineparams[1];}
+				//Field clock			^FC indicator1, indicator2, indicator3
+				if (linecommand == 'FC') {x=x;}
+				//Field data			^FD data
+				if (linecommand == 'FD') {  textdesc = lineparam; }
+				
+			}
+			if (linecommandgroup == 'G'){
+				//imposta immagine		^GF format, dataBytes, totalBytes, rowBytes, data
+				if (linecommand == 'GF') {x=x;}
+				//imposta rettangolo	^GB width, height, thickness, color, rounding
+				if (linecommand == 'GB') { typeobj = 'rectangle'; x1 = lineparams[0]; y1 = lineparams[1];}
+			}
+			if (linecommandgroup == 'S'){
+				//Field separator 			^SL mode, language
+				if (linecommand == 'SL')  {x=0; y=0;}
+				//imposta clock				^SO clock, months, days, years, hours, minutes, seconds
+				if (linecommand == 'SO')  {x=x;}
+			}
+			
+			if (linecommand == 'PW') { 
+				lblWidth = parseInt(lineparam) / self.dpi;
+				self.updateLabelSize(lblWidth, lblHeight, 203, 1);  
+			}
+			
+			if (linecommand == 'PQ') { 
+				//label number
+				//^PQ1,0,1,Y^XZ
+				//^PQnnnnnn,0,1,Y^XZ
+			}
+			
+			if (linecommandgroup == 'L'){
+				if (linecommand == 'LL')  { 
+					//Label Height 				^LL labelHeight
+					lblHeight = parseInt(lineparam)  / self.dpi;
+					self.updateLabelSize(lblWidth, lblHeight); 
+				}	
+				if (linecommand == 'LS')  { 
+					//Label shift 				^LS shift
+					lineparam = lineparam;
+				}
+			}
+			
+			if (linecommandgroup == 'M'){
+				if (linecommand == 'MM')  { 
+				/*
+					T = Tear-off n
+					P = Peel-off (not available on S-300) n
+					R = Rewind (depends on printer model)
+					A = Applicator (depends on printer model) n
+					C = Cutter (depends on printer model)
+					D = Delayed cutter n
+					F = RFID n
+					L = Reserved n, o
+					U = Reserved n, o
+					K = Kiosk p
+				*/
+				}	
+				if (linecommand == 'MT')  { 
+					//MTT;  transfer
+					//MTD;  direct
+				}
+			}	
+			//^FO188,1125^GB656,656,2,B,0^FS
+			//^FO-6,0^GB656,656,2,B,0^FS
+			
+		}
+		
+		self.updateCanvas();
+		
+	}
+	
+	this.saveLayout = function(){
+		for (var i = 0; i < this.currentLayer; i++) {
+			if (this.elements[i]) {
+				bufferElements += this.elements[i];
+			}
+		}
+		console.log(bufferElements);
+		return bufferElements;
+	}
+	
 	this.setNewObject = function(controller) {
 		if (controller) {
 			this.newObject = controller.object;
@@ -508,11 +726,6 @@ com.logicpartners.labelDesigner = function(canvasid, labelWidth, labelHeight) {
 		}
 	}
 
-	this.addRectangle = function(x, y, width, height) {
-		this.elements[this.currentLayer++] = new this.Rectangle(x, y, width, height);
-		this.updateCanvas();
-	}
-	
 	this.updateLabelSize(labelWidth, labelHeight);
 	
 	this.updateCanvas();

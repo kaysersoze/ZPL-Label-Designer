@@ -55,25 +55,25 @@ com.logicpartners.propertyInspector = function(designer, canvas) {
 		
 		if (this.activeElement == activeElement) {
 			for (var key in activeElement) {
-				if (!activeElement.readonly || key != "readonly" && $.inArray(key, activeElement.readonly) == -1) {
-					if (getType.toString.call(activeElement[key]) != '[object Function]') {
-						this.propertyNodes[key].val(activeElement[key]);
+				if (!activeElement.hidden || key != "hidden" && $.inArray(key, activeElement.hidden) == -1) {
+					if (!activeElement.readonly || key != "readonly" && $.inArray(key, activeElement.readonly) == -1) {
+						if (getType.toString.call(activeElement[key]) != '[object Function]') {
+							this.propertyNodes[key].val(activeElement[key]);
+						}
 					}
 				}
 			}
-		}
-		else {
+		} else {
 			this.activeElement = activeElement;
 			this.propertyView.html('');
 
 			for (var key in activeElement) {
-				if (!keys[key]) {
-					keys[key] = true;
-					
-					if (key != "readonly" && getType.toString.call(activeElement[key]) != '[object Function]') {
+				if (!activeElement.hidden || key != "hidden" && $.inArray(key, activeElement.hidden) == -1) {
+					if (getType.toString.call(activeElement[key]) != '[object Function]') {
+						
 						var elementKey = $('<div>' + key + '</div>')
 								.css({
-									"width": "65px",
+									"width": "70px",
 									"height": "20px",
 									"border": "1px solid #AAAAAA",
 									"float": "left",
@@ -84,24 +84,61 @@ com.logicpartners.propertyInspector = function(designer, canvas) {
 									"padding-right": "5px",
 									"margin-left": "5px"
 								});
-
-						var elementValue = $('<input type="text" name="' + key + '" value="' + activeElement[key] + '">')
-								.css({
-									"width": "120px",
-									"float": "left",
-									"height": "22px",
-									"line-height": "20px",
-									"padding-left": "5px"
-								});
 								
+						//editor object
+						var elementValue;
+						if (activeElement[key].hasOwnProperty('list')){
+							var options = options + '<option value="CODE128">CODE128</option>';
+							options = options + '<option value="CODE39">CODE39</option>';
+							options = options + '<option value="EAN13">EAN13</option>';
+							options = options + '<option value="EAN_UPC">EAN_UPC</option>';
+							options = options + '<option value="ITF">ITF</option>';
+							options = options + '<option value="pharmacode">pharmacode</option>';
+							elementValue = $('<select name="' + key + '">' + options + '</select>')
+									.css({
+										"width": "100px",
+										"float": "left",
+										"height": "22px",
+										"line-height": "20px",
+										"padding-left": "5px"
+									});
+						}else if (getType.toString.call(activeElement[key]) == 'boolean') {	
+							var options = options + '<option value="true">true</option>';
+							options = options + '<option value="false">false</option>';
+							elementValue = $('<select name="' + key + '">' + options + '</select>')
+									.css({
+										"width": "100px",
+										"float": "left",
+										"height": "22px",
+										"line-height": "20px",
+										"padding-left": "5px"
+									});
+							
+						}else{		
+							//other
+							elementValue = $('<input type="text" name="' + key + '" value="' + activeElement[key] + '">')
+									.css({
+										"width": "100px",
+										"float": "left",
+										"height": "22px",
+										"line-height": "20px",
+										"padding-left": "5px"
+									});
+						}
+						
+						//readonly
 						if (!activeElement.readonly || $.inArray(key, activeElement.readonly) == -1) {
 							elementValue.on("keyup", {"objectProperty": key}, function(event) {
 								var data = self.activeElement[event.data.objectProperty];
 								self.activeElement[event.data.objectProperty] = (data === parseInt(data, 10)) ? parseInt($(this).val()) : $(this).val();
 								self.labelDesigner.updateCanvas();
 							});
-						}
-						else {
+							elementValue.on("change", {"objectProperty": key}, function(event) {
+								var data = self.activeElement[event.data.objectProperty];
+								self.activeElement[event.data.objectProperty] = (data === parseInt(data, 10)) ? parseInt($(this).val()) : $(this).val();
+								self.labelDesigner.updateCanvas();
+							});
+						} else {
 							// Draw readonly textbox.
 							elementValue.prop("readonly", true).css({ "background-color" : "#DDDDDD", border : "1px solid #AAAAAA" });
 						}
