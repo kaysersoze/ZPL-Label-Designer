@@ -17,10 +17,10 @@ com.logicpartners.labelControl.size = function(designer) {
 			width : "50px"
 			
 		})
-		.val(this.designer.labelWidth / this.designer.dpi)
+		.val(this.designer.labelWidth)
 		.appendTo(this.widthContainer)
 		.on("blur", function() {
-				self.updateDesigner();
+			self.updateDesigner();
 		})
 		.on("keypress", function(e) {
 			if (e.which == 13) {
@@ -36,11 +36,10 @@ com.logicpartners.labelControl.size = function(designer) {
 			width : "50px"
 			
 		})
-		.val(this.designer.labelHeight / this.designer.dpi)
+		.val(this.designer.labelHeight)
 		.appendTo(this.heightContainer)
 		.on("blur", function() {
-			
-				self.updateDesigner();
+			self.updateDesigner();
 		})
 		.on("keypress", function(e) {
 			if (e.which == 13) {
@@ -50,16 +49,34 @@ com.logicpartners.labelControl.size = function(designer) {
 		});
 		
 	this.dpiContainer = $("<div>DPI: </div>").addClass("designerLabelControlContainer").appendTo(this.workspace);
-	this.dpiController = $("<input type=\"text\" />")
+	this.dpiController = $("<select> <option value='152'>152 dpi6</option><option value='203'>203 dpi8</option><option value='300'>300 dpi12</option><option value='600'>600 dpi24</option></select>")
+	//this.dpiController = $("<input type=\"text\" />")
 		.addClass("designerLabelControlElement")
 		.css({
-			width : "50px"
+			width : "100px"
 		})
 		.val(this.designer.dpi)
 		.appendTo(this.dpiContainer)
 		.on("blur", function() {
-			
+			self.updateDesigner();
+		})
+		.on("keypress", function(e) {
+			if (e.which == 13) {
+				e.preventDefault();
 				self.updateDesigner();
+			}
+		});
+		
+	this.zoomContainer = $("<div>Zoom: </div>").addClass("designerLabelControlContainer").appendTo(this.workspace);
+	this.zoomController = $("<input type=\"text\" />")
+		.addClass("designerLabelControlElement")
+		.css({
+			width : "50px"
+		})
+		.val(this.designer.zoom)
+		.appendTo(this.zoomContainer)
+		.on("blur", function() {
+			self.updateDesigner();
 		})
 		.on("keypress", function(e) {
 			if (e.which == 13) {
@@ -69,24 +86,26 @@ com.logicpartners.labelControl.size = function(designer) {
 		});
 		
 	this.updateDesigner = function() {
+		var width = this.designer.labelWidth;
+		var height = this.designer.labelHeight;
+		var zoom = this.designer.zoom;
 		var dpi = this.designer.dpi;
 		
 		if (!isNaN(this.dpiController.val())) dpi = this.dpiController.val();
-		this.designer.dpi = dpi;
-		
-		var width = this.designer.labelWidth / this.designer.dpi;
-		var height = this.designer.labelHeight / this.designer.dpi;
-		
 		if (!isNaN(this.widthController.val())) width = this.widthController.val();
 		if (!isNaN(this.heightController.val())) height = this.heightController.val();
+		if (!isNaN(this.zoomController.val())) zoom = this.zoomController.val();
 		
-		this.designer.updateLabelSize(width, height);
+		this.dpiController.dpi = dpi;
 		this.widthController.val(width);
 		this.heightController.val(height);
+		this.designer.updateLabelSize(width, height, dpi, zoom);
 	}
 		
 	this.update = function() {
-		this.widthController.val(this.designer.labelWidth / this.designer.dpi);
-		this.heightController.val(this.designer.labelHeight / this.designer.dpi);
+		this.widthController.val(this.designer.labelWidth);
+		this.heightController.val(this.designer.labelHeight);
+		this.dpiController.val(this.designer.dpi);
+		this.zoomController.val(this.designer.zoom);
 	}
 }
