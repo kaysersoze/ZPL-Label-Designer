@@ -111,9 +111,9 @@ com.logicpartners.designerTools.image = function() {
 		});
 	};
 	
-	this.object =  function(x, y, width, height, data) {
+	this.object = function(x, y, width, height, data) {
 		this.uniqueID = self.counter;
-		this.name = "Image " + self.counter++;
+		this.name = "Image" + self.counter++;
 		this.x = x;
 		this.y = y;
 		this.width = width;
@@ -192,8 +192,6 @@ com.logicpartners.designerTools.image = function() {
 			
 			return "~DGIMG" + this.uniqueID + "," + bytesPerLine * height + "," + bytesPerLine + "," + imgData;
 		},
-		
-		
 		
 		this.toZPL = function(labelx, labely, labelwidth, labelheight) {
 			return "^FO" + (this.x - labelx) + "," + (this.y - labely) + "^XGR:IMG" + this.uniqueID + ",1,1^FS";

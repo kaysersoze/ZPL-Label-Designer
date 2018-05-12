@@ -9,12 +9,17 @@ com.logicpartners.designerTools.rectangle = function() {
 	var self = this;
 	this.counter = 1;
 	this.button = $("<div></div>").addClass("designerToolbarRectangle designerToolbarButton").attr("title", "Rectangle").append($("<div></div>"));
-	this.object =  function(x, y, width, height) {
-		this.name = "Rectangle " + self.counter++;
+	this.object = function(x, y, width, height, data) {
+		this.uniqueID = self.counter;
+		this.name = "Rectangle" + self.counter++;
 		this.x = x;
 		this.y = y;
 		this.width = width;
 		this.height = height;
+		this.data = data;
+		
+		this.readonly = [ "width", "height", "data" ];
+		this.hidden = [ "data", "uniqueID" ];
 		
 		this.getZPLData = function() {
 			return "";
@@ -29,7 +34,8 @@ com.logicpartners.designerTools.rectangle = function() {
 		}
 		
 		this.draw = function(context) {
-			context.fillRect(this.x, this.y, this.width, this.height);
+			//context.fillRect(this.x, this.y, this.width, this.height);
+			context.rect(this.x, this.y, this.width, this.height);
 		}
 		
 		this.setWidth = function(width) {
